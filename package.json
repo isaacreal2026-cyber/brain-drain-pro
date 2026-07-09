@@ -1,0 +1,27 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npm install --include=dev --ignore-scripts --legacy-peer-deps && npm run dev -w @workspace/brain-builder",
+    "build": "npm install --include=dev --ignore-scripts --legacy-peer-deps && npm run build -w @workspace/brain-builder",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "npm run typecheck:libs && tsc --noEmit"
+  },
+  "private": true,
+  "workspaces": [
+    "artifacts/*",
+    "scripts"
+  ],
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "prettier": "^3.8.3",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "date-fns": "^4.4.0",
+    "firebase": "^12.15.0",
+    "recharts": "^3.9.1"
+  }
+}
