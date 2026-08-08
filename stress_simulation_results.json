@@ -1,0 +1,56 @@
+{
+  "high_traffic": {
+    "request_volume": 10000,
+    "active_users": 1500,
+    "average_response_time_ms": 280,
+    "error_rate_percentage": 1.2,
+    "failure_point": "Gemini API and Firestore rule queries start queuing up; high HTTP 429 risk if API limits are exceeded."
+  },
+  "rapid_api_requests": {
+    "requests_per_second": 45,
+    "gemini_api_call_count": 45,
+    "rate_limited_429s": 28,
+    "failure_point": "Lack of debouncing/throttling on frontend actions exhausts user quota within 10 seconds, causing immediate UX failure."
+  },
+  "concurrent_users": {
+    "concurrent_connections": 500,
+    "database_transactions": 250,
+    "race_condition_conflicts": 12,
+    "failure_point": "Concurrent edits on identical user configurations lead to 'last write wins' data overwrites and dirty-reads."
+  },
+  "network_failures": {
+    "packet_loss_rate": 0.15,
+    "offline_events": 5,
+    "cached_writes_committed": 22,
+    "failure_point": "Without Firestore Offline Persistence explicitly enabled, any network drop leads to immediate client UI freeze and potential data-loss."
+  },
+  "database_delays": {
+    "firestore_read_latency_ms": 1200,
+    "unindexed_query_count": 8,
+    "ui_renders_blocked": true,
+    "failure_point": "Large, un-paginated queries without startAfter/limit block the client visualization (D3/Recharts) and cause UI lagging."
+  },
+  "server_restarts": {
+    "cold_start_delay_seconds": 4.5,
+    "db_handshake_ms": 120,
+    "interrupted_requests": 3,
+    "failure_point": "Serverless container recycling results in 3-5 second API latency spikes, degrading interactivity during initial loads."
+  },
+  "large_datasets": {
+    "node_count": 12000,
+    "edge_count": 35000,
+    "render_fps_unmemoized": 4,
+    "failure_point": "Unmemoized SVG canvas rendering locks the main browser thread under heavy D3 force-directed simulations."
+  },
+  "memory_pressure": {
+    "memory_growth_rate_mb_per_minute": 15.4,
+    "uncleaned_event_listeners": 420,
+    "oom_risk_level": "High (over 30 minutes of usage)",
+    "failure_point": "Lack of proper cleanup in React's useEffect when destroying D3 canvas structures triggers slow-burn memory leaks."
+  },
+  "cpu_pressure": {
+    "cpu_utilization_percent": 98.2,
+    "main_thread_blocking_ms": 320,
+    "failure_point": "Heavy mathematical layouts and nested Zod schema validations blocking the single-threaded event loop."
+  }
+}
