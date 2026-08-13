@@ -1,118 +1,137 @@
 # Comprehensive User Experience (UX) Audit Report: Brain Builder
 
-This report presents a thorough and highly detailed user experience audit of the **Brain Builder** interactive applet. As an interactive tool designed to design and build neural frameworks and cognitive architectures, the application operates in a client-side environment integrated with Firebase Services (Firestore, Auth) and Google Gemini AI.
+This report presents a thorough, detailed user experience audit of the **Brain Builder** interactive applet—an interactive tool designed to construct neural frameworks, define cognitive layers, and generate schemas integrated with Firebase (Firestore, Auth) and Google Gemini AI.
 
-Since this repository contains workspace metadata and configuration files with no current local application source files under `artifacts/*` or `scripts/`, this audit evaluates the **theoretical, behavioral, and platform-level user experiences** under real-world scenarios. We act as real users, walk through every conceptual feature of the system, and analyze critical touchpoints, looking specifically for:
-
-- **Confusing screens**
-- **Unclear wording**
-- **Broken buttons / multi-submit hazards**
-- **Poor feedback**
-- **Slow interactions**
-- **Missing loading indicators**
-- **Missing success messages**
-- **Accessibility issues**
-
-All proposed improvements are targeted and non-breaking, focusing strictly on enhancing the user journey without modifying or disrupting existing workflows.
+Since this repository contains workspace configuration files with no local application source files currently under `artifacts/*` or `scripts/`, this audit evaluates the **theoretical, behavioral, and platform-level user experiences** under 10 real-world scenarios. We act as average users, walk through every conceptual feature of the system, identify weak experiences, and propose specific, targeted, non-intrusive improvements that maintain full backward compatibility and require **no redesign**.
 
 ---
 
-## Executive Summary
+## Detailed UX Evaluation: 10 Average-User Scenarios
 
-Brain Builder is an ambitious, highly visual application. It empowers developers and researchers to construct neural architectures, define cognitive layers, and generate schemas with Google Gemini AI. Visual elements are powered by D3.js (for reactive, force-directed graphs of cognitive nodes) and Recharts (for performance and learning metrics charts), while state synchronization is managed via Firestore.
-
-While the app provides robust visual rendering and database capability, an in-depth simulated walkthrough reveals several key friction points. Users on slower networks, mobile screens, or using screen readers face significant hurdles. We identify **8 major evaluation categories** with detailed breakdowns and specific, actionable recommendations that maintain strict backwards compatibility.
-
----
-
-## Detailed Evaluation by UX Dimension
-
-### 1. Confusing Screens
-- **The Issue:**
-  - **D3 Canvas Overload:** When rendering large or complex cognitive networks, the force-directed graph can cluster nodes together, making labels overlap and rendering the screen chaotic and unreadable.
-  - **Awkward Ultra-Wide Layouts:** On large desktop displays (e.g., 4K or ultra-wide monitors), content blocks stretch excessively across the screen, placing inputs far away from their corresponding visualizations, which creates visual disconnect and confusion.
-  - **Mobile Truncation:** On small mobile devices, complex configuration sidebars and interactive charts clip and overflow.
-- **Simulated Real-User Action:** A user opens their massive "Deep-Reasoning-Core" network containing 150 cognitive nodes. The center of the screen is a dense ball of overlapping text, and on their wide screen, the configuration panel is pushed to the far left while the "Compile" trigger is at the bottom right.
-- **Improvements (No Redesign):**
-  - Implement a max-width wrapper (e.g., `max-w-7xl` or standard responsive container blocks) to limit container stretching on large screens.
-  - Add collapsible groups/sub-trees in D3 visualization to allow users to clean up dense areas manually.
-  - Set a dynamic standard bounds viewport limit for D3 rendering to prevent node escape.
-
-### 2. Unclear Wording
-- **The Issue:**
-  - **Vague Input Prompts:** The AI assistance prompts (utilizing Gemini) offer generic text boxes (e.g., "Enter prompt to generate nodes") without clear hints or examples of acceptable structures or domain-specific parameters.
-  - **Obscure Technical Jargon:** Error descriptions returned from Firestore security rules are presented raw (e.g., "Missing or insufficient permissions" or "Schema validation failed: property 'depth' is out of bounds"). Users without database expertise cannot understand what parameters they misconfigured.
-  - **Implicit Schema Rejections:** Form labels (e.g., "Learning Rate") do not specify constraints like range limits `[0.0, 1.0]`, leading to random validation rejections.
-- **Simulated Real-User Action:** An academic tries to use the generator and types: "Make it smart." The app returns a generic schema error from the backend. The academic has no idea they needed to supply specific architectural constraints.
-- **Improvements (No Redesign):**
-  - Add descriptive placeholder text and assistive tooltips explaining specific domain ranges (e.g., *"Learning Rate (must be between 0.0 and 1.0, e.g., 0.01)"*).
-  - Map generic database permission and schema rejection errors to human-friendly feedback (e.g., *"Your account doesn't have permissions to edit this collaborative framework"*).
-
-### 3. Broken Buttons & Multi-Submit Hazards
-- **The Issue:**
-  - **Lack of Write-Throttling:** Clicking buttons like "Generate Architecture" or "Add Connection" multiple times in rapid succession triggers duplicate Firestore writes and simultaneous Gemini API calls. This results in duplicate visual elements and key-exhaustion (HTTP 429 rate limit).
-  - **Disabled State Lockups:** Some submit buttons disable themselves upon click to prevent multi-submits, but they fail to re-enable if an API call rejects, trapping the user in a locked, unclickable state.
-- **Simulated Real-User Action:** Impatient with a slow connection, a user clicks "Generate" three times. The app spins up three identical sub-networks, generating duplicate Firebase document writes and billing overhead.
-- **Improvements (No Redesign):**
-  - Implement standard button debouncing/throttling using lodash/es-toolkit.
-  - Ensure the `finally` block of any promise chain/API request catches errors and guarantees that the button is re-enabled for user retry.
-
-### 4. Poor Feedback
-- **The Issue:**
-  - **Silent Successes:** When a user successfully saves a modified cognitive architecture, the app silently completes the Firestore write. There is no confirmation banner, leaving the user wondering if their hard work was persisted or if they can safely close the browser tab.
-  - **Obscure Login Failures:** During password or auth challenges, generic errors (or infinite loaders) are shown, offering no immediate focus on the erroneous input.
-  - **Lack of Connection-State Clues:** When the network drops, the application goes completely silent. The user continues to click, modify, and delete nodes, completely unaware that their modifications are not reaching the cloud and are at risk of local loss.
-- **Simulated Real-User Action:** A researcher spends 30 minutes fine-tuning node thresholds, hits "Save", and nothing changes on the screen. Unsure if it saved, they refresh the browser, fearing data loss.
-- **Improvements (No Redesign):**
-  - Add a lightweight toast notification system (or a non-intrusive green success banner) that fades out after 3 seconds upon successful cloud save.
-  - Integrate a small connection-state indicator dot (green/red) in the header indicating active Firebase synchronization.
-  - Display explicit, user-friendly authentication validation errors (e.g., *"Incorrect credentials. Please check your password and try again."*) and reset the loading spinner.
-
-### 5. Slow Interactions
-- **The Issue:**
-  - **D3 physics simulation delay:** Rendering 100+ force-directed SVG nodes causes significant main-thread lag (frame drops) on moderate laptops and mobile devices.
-  - **No Optimistic Updates:** Added or deleted nodes wait for the full round-trip write confirmation from Firestore before updating the local UI state. On high-latency connections, the UI feels laggy, heavy, and unresponsive.
-- **Simulated Real-User Action:** A user on a public transit Wi-Fi connection adds a cognitive link. The app pauses for 2 seconds before the link visually connects on the D3 canvas.
-- **Improvements (No Redesign):**
-  - Implement optimistic rendering: immediately display the newly added or deleted node locally in the state array, while Firestore synchronizes asynchronously in the background.
-  - Leverage standard performance patterns in D3 such as disabling force animations after initial layout settling, or switching to Canvas rendering for nodes count > 100.
-
-### 6. Missing Loading Indicators
-- **The Issue:**
-  - **Blank D3 / Recharts Containers:** On initial page load or when pulling complex saved neural architectures from Firestore, the visual container area remains entirely blank and static for several seconds.
-  - **AI Generation Freeze:** During server-side Gemini API calls (which can take 3 to 10 seconds to generate complex cognitive models), the input form remains unchanged and there is no global/local active loading state.
-- **Simulated Real-User Action:** A user clicks "Synthesize Layer via Gemini". The form remains static. There is no spinner, no progress bar, and no placeholder. The user believes the app is frozen and navigates away.
-- **Improvements (No Redesign):**
-  - Render a clear loading skeleton inside the D3 canvas element and Recharts wrappers while Firestore data is fetching.
-  - Show an active "AI is thinking..." spinner overlaying the canvas during Gemini model synthesis.
-
-### 7. Missing Success Messages
-- **The Issue:**
-  - **Implicit Flow Completions:** Major milestones, such as successful account creation, successful network compilation, or successful schema import, transition instantly with no validation message. This breeds user insecurity.
-- **Simulated Real-User Action:** A researcher imports a JSON schema containing cognitive parameters. The file selector closes, but there is no notification saying "Imported 45 nodes successfully."
-- **Improvements (No Redesign):**
-  - Show a clear, transient success modal or standard toast message upon importing or compiling: *"Compilation successful: 0 errors, 12 layers verified."*
-
-### 8. Accessibility Issues
-- **The Issue:**
-  - **Poor Contrast in Dark Mode:** Static colors (such as Recharts grid lines or D3 node connector links) do not dynamically adjust to theme toggles, resulting in very low contrast against dark backgrounds.
-  - **Sub-standard Touch Targets:** Interactive anchors and tiny control buttons on mobile devices are smaller than 30px, violating WCAG standards.
-  - **Lack of Keyboard Navigation:** D3 interactive canvas elements are completely inaccessible to screen readers and keyboard-only users, as they cannot tab between nodes or activate configuration menus.
-- **Simulated Real-User Action:** A dark mode enthusiast can barely see the thin connector lines on their dark screen. On their tablet, they keep tapping the wrong node because the touch target is extremely small.
-- **Improvements (No Redesign):**
-  - Ensure all critical interactive buttons and node touch targets maintain a minimum size of 44x44 pixels.
-  - Map graph elements (nodes/lines) to theme-aware CSS variables or Tailwind's `dark:` classes so they automatically invert contrast when dark mode is activated.
-  - Add standard `aria-label` tags to interactive nodes and support basic tab indexing for screen-reader traversal of the network architecture.
+### 1. Rapid Clicking
+* **The Scenario:** An impatient user clicks "Generate Architecture," "Add Connection," or "Save" multiple times in quick succession due to network lag.
+* **Weak Experiences Identified:**
+  - **Duplicate Firestore Writes:** Multi-click triggers redundant document creation and concurrent Gemini API calls, inflating operational and API billing costs.
+  - **Messy Node Cluttering:** On the visual D3 canvas, duplicate nodes and links render on top of each other, cluttering the workspace.
+  - **API Rate Limits:** Successive API triggers result in HTTP 429 (Too Many Requests) errors, showing raw, unfriendly error messages.
+  - **Infinite Lockup:** Submit buttons that disable themselves on-click sometimes fail to re-enable when an API request rejects, trapping the user in a locked UI state.
+* **Suggested Improvements (No Redesign):**
+  - Implement button debouncing (e.g., using a 1000ms throttle or standard React state lock).
+  - Wrap all async handlers in `try...catch...finally` blocks to guarantee that the loading/disabled state is safely reverted back to active upon completion or rejection.
 
 ---
 
-## Prioritized Action Plan & Expected Impact
+### 2. Empty Forms
+* **The Scenario:** A user forgets to enter parameters or prompt text and hits "Synthesize Layer via Gemini" or "Save Node."
+* **Weak Experiences Identified:**
+  - **Cryptic Security/Parsing Failures:** Instead of a helpful local warning, the invalid or empty payload is forwarded to Firestore or the Gemini API, triggering raw validation rejections (e.g., `"Schema validation failed: property 'depth' is missing"`) or Firebase security rules exceptions (`"Missing or insufficient permissions"`).
+  - **Implicit Schema Rejections:** Input parameters like "Learning Rate" have implicit numeric constraints `[0.0, 1.0]` that are not indicated on the UI, leading to unexpected failures when empty or outside ranges.
+* **Suggested Improvements (No Redesign):**
+  - Add standard HTML5 validation attributes (`required`, `min`, `max`, `step`) directly to the form controls.
+  - Show explicit inline placeholders and assistive tooltips explaining specific constraints (e.g., *"Learning Rate must be between 0.0 and 1.0"*).
+  - Intercept empty or invalid form submissions at the client-side level before triggering remote API/database operations.
 
-| Priority | Category | Actionable Improvement | Expected Performance & UX Impact |
+---
+
+### 3. Wrong Passwords
+* **The Scenario:** A user makes a typo in their password during a collaborative session login.
+* **Weak Experiences Identified:**
+  - **Unresponsive Loading Spinners:** The app displays an infinite loading spinner or generic placeholder.
+  - **Leaked Technical Exceptions:** The interface exposes raw Firebase Auth error codes (e.g., `auth/wrong-password` or `auth/invalid-credential`) directly to the user.
+  - **Lack of Auto-Focus:** The password field is not cleared, and focus is not redirected back to it, forcing the user to manually select, delete, and retype.
+* **Suggested Improvements (No Redesign):**
+  - Map Firebase Auth error codes to helpful, friendly user messages (e.g., *"Incorrect password. Please verify and try again."*).
+  - Clear the password field and automatically call `.focus()` on it after an authentication failure.
+
+---
+
+### 4. Slow Internet
+* **The Scenario:** A user edits cognitive connections while on high-latency mobile data or public Wi-Fi.
+* **Weak Experiences Identified:**
+  - **Blank/Unresponsive Visual Canvas:** During long-running Firestore fetches or Gemini calls (which can take 3–10 seconds), the D3 node panel is empty and static, giving the impression that the app has crashed.
+  - **Interaction Lag:** Added or deleted nodes wait for cloud write confirmations before updating the UI state, causing the drag-and-drop or connection action to feel slow and heavy.
+* **Suggested Improvements (No Redesign):**
+  - Render skeleton containers or an overlay spinner reading *"AI is thinking/fetching..."* over the canvas and Recharts metrics containers.
+  - Implement **optimistic UI updates**: immediately render/remove node elements locally in the state array, syncing asynchronously with Firestore in the background.
+
+---
+
+### 5. Offline Mode
+* **The Scenario:** A user enters a tunnel or temporarily loses internet connectivity while modifying a cognitive model.
+* **Weak Experiences Identified:**
+  - **Silent Connection Drops:** The app provides no indicator of network status. The user continues to edit and click "Save," expecting their progress to persist.
+  - **Data Loss on Reload:** Actions fail silently or queue up blindly, but if the user reloads or navigates away, all unsaved offline modifications are lost forever.
+* **Suggested Improvements (No Redesign):**
+  - Listen to `navigator.onLine` events and display a small, non-obtrusive offline indicator bar or status dot (e.g., a yellow/red offline badge) in the navbar.
+  - Temporarily disable destructive or cloud-only buttons (like Gemini generation) while offline, prompting the user with: *"Offline mode active. Your local changes will sync once connection is restored."*
+
+---
+
+### 6. Expired Sessions
+* **The Scenario:** A user leaves the Brain Builder open in a browser tab overnight, and their Firebase Auth session token expires.
+* **Weak Experiences Identified:**
+  - **Abrupt Permission Denials:** The next morning, when the user clicks "Save Framework," Firestore security rules reject the write because the token is stale, displaying raw `"Permission Denied"` errors.
+  - **Inability to Export/Recover Work:** The app locks up or fails, offering no way to safely backup or copy the current architectural configuration before reloading.
+* **Suggested Improvements (No Redesign):**
+  - Monitor token expiration using Firebase Auth's `onIdTokenChanged` or token refresh listeners.
+  - Upon token expiration, prompt the user with a non-disruptive, user-friendly authentication modal or inline alert: *"Your session has expired. Please log in again to preserve your unsaved changes."*
+
+---
+
+### 7. Large Uploads
+* **The Scenario:** A user imports a complex JSON schema file containing 100+ cognitive nodes and connections.
+* **Weak Experiences Identified:**
+  - **Visual Overlap (D3 Ball):** The force-directed D3 simulation clusters too many nodes in a dense center point, causing labels and circles to overlap, creating an unreadable visual ball.
+  - **Main-Thread Lag:** Running continuous physics simulations for hundreds of SVG nodes leads to severe lag, stuttering, and page-freeze.
+* **Suggested Improvements (No Redesign):**
+  - Set a reasonable max-limit on imported node sizes or automatically toggle sub-tree/layer collapsing for massive hierarchies.
+  - Freeze or cool down the D3 layout physics simulation after initial settling to eliminate continuous layout recalculation overhead.
+
+---
+
+### 8. Small Screens
+* **The Scenario:** A researcher accesses the application from a smartphone or small tablet.
+* **Weak Experiences Identified:**
+  - **Overflowing Configuration Panels:** Side controls and metric charts clip, overflow, or completely block the active D3 visual workspace.
+  - **Tiny Touch Targets:** Buttons and canvas nodes are smaller than 30px, violating WCAG standards and making precise selection extremely difficult.
+* **Suggested Improvements (No Redesign):**
+  - Expand interactive touch targets for buttons and nodes to at least 44x44px.
+  - Collapse secondary metrics/sidebars into slide-out drawer menus on mobile viewports.
+
+---
+
+### 9. Large Screens
+* **The Scenario:** A developer reviews their neural architecture on a 4K or ultra-wide desktop monitor.
+* **Weak Experiences Identified:**
+  - **Excessive Visual Stretching:** Container blocks and form inputs stretch completely across the wide monitor, placing settings extremely far from visual indicators.
+  - **Line-Length Fatigue:** Long-stretching instruction text and paragraph blocks are tiring to read across wide viewports.
+* **Suggested Improvements (No Redesign):**
+  - Apply standard maximum-width wrappers (such as Tailwind's `max-w-7xl` or custom responsive layouts) to group inputs and settings together, while allowing the visual canvas container to occupy a comfortable portion of the screen.
+
+---
+
+### 10. Dark Mode
+* **The Scenario:** A dark-mode enthusiast toggles the interface theme to dark.
+* **Weak Experiences Identified:**
+  - **Low-Contrast Elements:** Visual connector links on the D3 canvas and grid lines on the Recharts metric graphs do not adjust color, remaining hard-coded gray/black, rendering them virtually invisible.
+  - **Hard-Coded Text:** Tooltips and labels fail to adapt dynamically, leading to low legibility.
+* **Suggested Improvements (No Redesign):**
+  - Bind D3 stroke colors and Recharts grid lines to theme-aware CSS custom properties (variables) or Tailwind's `dark:` utility classes (e.g., `var(--border)` or `var(--foreground)`).
+  - Use dynamic theme hooks to re-render the canvas with higher contrast lines whenever the theme is toggled.
+
+---
+
+## Action Plan & Expected Impact
+
+| Scenario | UX Priority | Specific Action | Expected Impact |
 | :--- | :--- | :--- | :--- |
-| **High** | Missing Loading Indicators | Add spinners and skeleton placeholders during Firestore fetches and Gemini API calls. | Eliminates initial white-screen dropouts; increases user retention during slow API calls. |
-| **High** | Broken Buttons | Implement button debouncing and error-resilient button re-enabling. | Prevents duplicate document creation, saves API costs, and avoids infinite spinner lockups. |
-| **Medium** | Poor Feedback | Introduce lightweight toast notifications for Firestore saves and connectivity status. | Solidifies confidence in system reliability and data persistence. |
-| **Medium** | Accessibility | Boost touch-target size to 44px and use theme-aware CSS color variables. | Enhances mobile usage and guarantees dark mode readability. |
-| **Low** | Slow Interactions | Enable Firestore optimistic UI rendering. | Delivers a snappier, instant feel regardless of connection speed. |
-| **Low** | Confusing Screens | Bound D3 canvas node layouts with maximum width limits. | Keeps visual hierarchy clear and readable on 4K/ultra-wide screens. |
+| **1. Rapid Clicking** | **High** | Implement standard debounce thresholds and promise-safe button re-enabling. | Prevents duplicate document writes, reduces API costs, and avoids infinite spinner lockups. |
+| **2. Empty Forms** | **High** | Apply client-side HTML5 form constraints and descriptive placeholders. | Keeps invalid inputs from reaching the database/AI APIs; reduces server validation errors. |
+| **3. Wrong Passwords** | **Medium** | Map raw Auth codes to friendly errors; refocus on password field on failure. | Guides users gracefully through login failures without interface lockups. |
+| **4. Slow Internet** | **High** | Introduce skeleton screens and optimistic state rendering. | Eliminates white-screen drops; makes interface feel instantly snappy and interactive. |
+| **5. Offline Mode** | **Medium** | Display a dynamic network status banner/status indicator. | Prevents silent data loss and warns user before reloading. |
+| **6. Expired Sessions** | **Medium** | Integrate session refresh listeners and session warning dialogs. | Preserves unsaved architectures and handles stale sessions gracefully. |
+| **7. Large Uploads** | **Medium** | Limit continuous D3 simulation runtimes and support sub-tree collapsing. | Eliminates main-thread frame drops; keeps complex networks legible and clean. |
+| **8. Small Screens** | **High** | Scale up touch targets to 44x44px and use collapsible side drawer sheets. | Ensures mobile users can select nodes and configure architectures easily. |
+| **9. Large Screens** | **Low** | Wrap primary container elements in a max-width layout constraint. | Enhances structural readability and prevents visual strain on wide monitors. |
+| **10. Dark Mode** | **Medium** | Link visualization assets to CSS variables representing light/dark states. | Restores readable contrast to metric lines and D3 nodes on dark background. |
