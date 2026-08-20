@@ -124,6 +124,21 @@ By analyzing user interactions under stress test conditions, we identify weak ex
 
 ---
 
+## Category Mapping of UX Audit Findings
+
+| Category | Associated Scenarios & Findings | Proposed Non-Intrusive Solution |
+| :--- | :--- | :--- |
+| **Confusing Screens** | Scenarios 2, 6, 9: Screen stretching on large displays; unhandled session expiration leaving user on broken UI state. | Apply max-width containers (`max-w-7xl`); preserve draft state in `sessionStorage` with smooth session refresh. |
+| **Unclear Wording** | Scenarios 2, 3: Raw backend schema/auth error strings (e.g. `auth/wrong-password` or missing field names). | Map technical Firebase/Gemini errors to human-friendly messages and clear inline field helper labels. |
+| **Broken Buttons** | Scenarios 1, 8: Buttons locking permanently on async error; touch targets < 44px on mobile devices. | Wrap async button handlers in `try...finally`; enforce 44x44px minimum interactive touch target size. |
+| **Poor Feedback** | Scenarios 1, 2, 5: Silent operation failures; missing offline state indication; rapid double submission. | Debounce action triggers (300ms); display non-intrusive offline indicator banner; add inline validation hints. |
+| **Slow Interactions** | Scenarios 4, 7: Main-thread freeze during large JSON parsing/graph layout; delayed UI response on latency. | Offload heavy computations to Web Workers/micro-tasks; adopt optimistic local UI state updates. |
+| **Missing Loading Indicators** | Scenarios 3, 4, 7: Blank static graph canvas during network fetching; infinite spinners without password field reset. | Display skeleton loaders inside visual containers; clear password inputs and stop spinners on auth rejection. |
+| **Missing Success Messages** | Scenarios 1, 5: Absence of confirmation when framework state or cognitive nodes are saved or synchronized offline. | Add non-intrusive toast notifications and sync indicator dots for state persistence confirmations. |
+| **Accessibility Issues** | Scenarios 8, 10: Low contrast SVG connectors/gridlines in dark mode; undersized mobile touch targets. | Bind SVG and chart line colors to CSS theme variables (`var(--border-color)`); ensure WCAG AA >= 4.5:1 text contrast. |
+
+---
+
 ## Summary Matrix & Actionable Impact
 
 | Scenario | Weak Experience | Non-Intrusive Fix | Impact |
