@@ -2,28 +2,76 @@
 
 This report presents a thorough user experience audit of the **Brain Builder** interactive applet. As an interactive application designed to build neural frameworks and cognitive architectures, the application operates in a client-side environment integrated with Firebase Services (Firestore, Auth) and Google Gemini AI.
 
-Since this repository contains workspace configuration metadata without active application source code under `artifacts/*` or `scripts/`, this report evaluates theoretical, behavioral, and platform-level user experiences from the perspective of an average user across **10 core scenarios**:
-
-1. **Rapid Clicking**
-2. **Empty Forms**
-3. **Wrong Passwords**
-4. **Slow Internet**
-5. **Offline Mode**
-6. **Expired Sessions**
-7. **Large Uploads**
-8. **Small Screens**
-9. **Large Screens**
-10. **Dark Mode**
-
-All proposed improvements are targeted and non-intrusive, focusing strictly on improving clarity, feedback, reliability, and usability **without redesigning the UI/UX or altering layout/styling**.
+Since this repository contains workspace configuration metadata without active application source code under `artifacts/*` or `scripts/`, this report evaluates theoretical, behavioral, and platform-level user experiences from the perspective of an average real user across key features and usability vectors.
 
 ---
 
 ## Executive Summary
 
-When thinking like an average user, friction occurs primarily around system responsiveness, state feedback, network disruption, form validation, and screen adaptability.
+When navigating application features, user friction occurs primarily around system responsiveness, state feedback, network disruption, form validation, screen adaptability, and accessibility.
 
-By analyzing user interactions under stress test conditions, we identify weak experiences across all 10 scenarios and outline minimal, backward-compatible enhancements (such as debouncing, inline error messages, optimistic loading states, toast notifications, and theme variable adjustments) to ensure a robust user journey.
+By evaluating application features against standard user interaction flows, we identify weak experiences across **8 key usability vectors** and **10 core usage scenarios**. All proposed improvements are targeted and non-intrusive, focusing strictly on improving clarity, feedback, reliability, and usability **without redesigning the UI/UX or altering layout/styling/workflows**.
+
+---
+
+## Feature Navigation & Vector-Based UX Audit
+
+### 1. Confusing Screens
+- **Observation:** Complex visual canvases (e.g. D3 force graph visualizers) and multi-tab architecture configuration screens can overload new users with dense controls and minimal initial guidance.
+- **Identified Weak Experience:** Uninstructed empty canvases or dense control panels leave users uncertain about where to initiate architecture setup or how node relationships function.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Add contextual tooltips or inline helper text on empty states (e.g. *"Click 'Add Node' or select a preset to begin building your neural framework"*).
+  - Add subtle visual focus rings or step cues for initial workflow entry points.
+
+### 2. Unclear Wording
+- **Observation:** Technical error messages or generic action labels increase cognitive load.
+- **Identified Weak Experience:** Raw backend error codes (e.g., `auth/invalid-credential`, `permission-denied`, `HTTP 429`) and ambiguous button labels (e.g., "Submit" vs "Save Architecture") confuse non-technical users.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Standardize button labels with action-oriented phrasing (e.g., *"Save Architecture Changes"*, *"Generate Neural Framework"*).
+  - Map technical Firebase and Gemini API error codes to human-readable explanations (e.g., *"Unable to save changes. Please check your network connection and try again."*).
+
+### 3. Broken Buttons
+- **Observation:** Interactive triggers without proper state management or event handling during asynchronous operations.
+- **Identified Weak Experience:** Rapidly clicked buttons without debouncing trigger duplicate asynchronous calls or become permanently locked in a disabled state if error handling omits `finally` blocks.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Wrap all asynchronous submit handlers in `try...finally` blocks to guarantee buttons re-enable after failure or completion.
+  - Implement 300–500ms debouncing/throttling on action triggers to block unintended duplicate clicks.
+
+### 4. Poor Feedback
+- **Observation:** Silent background processing during state modifications or network requests.
+- **Identified Weak Experience:** Form submissions or data syncing operations complete without visible visual confirmation, leaving users uncertain whether their action succeeded or failed.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Display non-intrusive toast notifications or status indicators for background operations (e.g., *"Draft auto-saved"*).
+  - Provide inline error highlights on form inputs when validation fails.
+
+### 5. Slow Interactions
+- **Observation:** Heavy computational tasks (such as D3 layout recalculations or processing large JSON schemas) blocking the main UI thread.
+- **Identified Weak Experience:** Panning, zooming, or editing large node architectures suffers from input lag or temporary frame freezes during intensive recalculations.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Offload heavy graph parsing or schema calculations to Web Workers or chunked micro-tasks.
+  - Optimize D3 tick rendering intervals and employ requestAnimationFrame batching for smooth graph physics.
+
+### 6. Missing Loading Indicators
+- **Observation:** Async state transitions without visual loading cues.
+- **Identified Weak Experience:** Canvases, charts, and data tables remain blank or static during AI generation requests or initial Firestore fetches, creating the impression that the app has frozen.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Add inline skeleton loaders or subtle spinner overlays within visual container boundaries during pending async data fetches.
+  - Implement optimistic UI updates locally so node edits render instantly while persisting in the background.
+
+### 7. Missing Success Messages
+- **Observation:** Successful completion of user actions returning to default states without confirmation.
+- **Identified Weak Experience:** After saving profile settings, updating architecture nodes, or importing schemas, the UI resets without explicitly acknowledging success.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Show brief, self-dismissing success toasts (e.g., *"Architecture saved successfully"*, *"Schema imported"*).
+  - Provide checkmark micro-indicators on action buttons upon successful completion.
+
+### 8. Accessibility Issues
+- **Observation:** Standard web accessibility gaps in interactive graphs, forms, and color schemes.
+- **Identified Weak Experience:** Touch targets smaller than 44x44px on mobile devices, low contrast connector lines/text in dark mode, and missing ARIA attributes on dynamic canvas nodes.
+- **Non-Intrusive Improvements (No Workflow/Layout Change):**
+  - Enforce minimum 44x44px touch target padding for interactive mobile elements.
+  - Ensure all text and borders meet WCAG AA contrast standards (4.5:1 ratio) in both light and dark themes using dynamic CSS variables.
+  - Add ARIA roles, `aria-label` attributes, and keyboard navigation support (`tabIndex`, `Enter`/`Space` key handlers) across interactive controls.
 
 ---
 
@@ -126,15 +174,23 @@ By analyzing user interactions under stress test conditions, we identify weak ex
 
 ## Summary Matrix & Actionable Impact
 
-| Scenario | Weak Experience | Non-Intrusive Fix | Impact |
+| Category / Vector | Weak Experience | Non-Intrusive Fix | Impact |
 | :--- | :--- | :--- | :--- |
-| **1. Rapid Clicking** | Duplicate writes, API rate limits, frozen buttons | Debounce buttons, handle `finally` re-enabling | Eliminates duplicate submissions & API costs |
-| **2. Empty Forms** | Silent failures, unhelpful raw schema errors | Inline validation hints & field autofocus | Guides user to correct input errors |
-| **3. Wrong Passwords** | Unclear error strings, infinite spinners | Clear user-friendly auth error mapping | Reduces login frustration |
-| **4. Slow Internet** | Blank canvases, un-responsive UI | Skeleton loaders & optimistic UI state updates | Keeps user informed during latency |
-| **5. Offline Mode** | Unnoticed loss of sync, dropped changes | Offline state banner & IndexedDB persistence | Prevents lost work during network drops |
-| **6. Expired Sessions** | Uncaught permission errors, lost draft data | Session refresh prompt & draft preservation | Seamless user re-authentication |
-| **7. Large Uploads** | Main thread lockup, frozen screen | Size limits, Web Worker parsing, progress text | Prevents browser freeze on heavy schemas |
-| **8. Small Screens** | Tiny touch targets (<30px), clipping sidebars | 44px min touch targets & horizontal scroll | Smooth mobile user experience |
-| **9. Large Screens** | Excessive stretching, scattered node graph | `max-w-7xl` containers & D3 viewport bounds | Enhances readability on wide monitors |
-| **10. Dark Mode** | Low contrast connector lines & labels | CSS theme variables for dynamic SVG/chart contrast | WCAG AA compliant readability |
+| **Confusing Screens** | Empty visual canvas with no step cues | Contextual tooltips & empty state guides | Clear entry point for new users |
+| **Unclear Wording** | Technical Firebase/Gemini errors | Human-readable error messages & active action labels | Reduces cognitive friction |
+| **Broken Buttons** | Multiple async invocations, locked disabled state | 300ms button debouncing & `try...finally` state reset | Prevents frozen buttons & duplicate requests |
+| **Poor Feedback** | Silent backend updates | Non-intrusive toast notifications & field highlights | Confirms system actions |
+| **Slow Interactions** | UI thread locks during D3 physics / parsing | Web Workers for parsing & requestAnimationFrame | Smooth 60fps graph renders |
+| **Missing Loading Indicators** | Blank canvas during network fetch | Skeleton loaders & optimistic UI updates | Immediate visual responsiveness |
+| **Missing Success Messages** | Form resets without feedback | Brief success toast notifications | Clear acknowledgment of actions |
+| **Accessibility Issues** | Tiny touch targets (<44px), low contrast | 44px touch targets, WCAG AA contrast, ARIA roles | Full accessible usability |
+| **Rapid Clicking** | Duplicate writes, API rate limits | Debounce buttons, handle `finally` re-enabling | Eliminates duplicate submissions |
+| **Empty Forms** | Silent failures, unhelpful raw schema errors | Inline validation hints & field autofocus | Guides user to correct input errors |
+| **Wrong Passwords** | Unclear error strings, infinite spinners | Clear user-friendly auth error mapping | Reduces login frustration |
+| **Slow Internet** | Blank canvases, un-responsive UI | Skeleton loaders & optimistic UI state updates | Keeps user informed during latency |
+| **Offline Mode** | Unnoticed loss of sync, dropped changes | Offline state banner & IndexedDB persistence | Prevents lost work during network drops |
+| **Expired Sessions** | Uncaught permission errors, lost draft data | Session refresh prompt & draft preservation | Seamless user re-authentication |
+| **Large Uploads** | Main thread lockup, frozen screen | Size limits, Web Worker parsing, progress text | Prevents browser freeze on heavy schemas |
+| **Small Screens** | Tiny touch targets (<30px), clipping sidebars | 44px min touch targets & horizontal scroll | Smooth mobile user experience |
+| **Large Screens** | Excessive stretching, scattered node graph | `max-w-7xl` containers & D3 viewport bounds | Enhances readability on wide monitors |
+| **Dark Mode** | Low contrast connector lines & labels | CSS theme variables for dynamic SVG/chart contrast | WCAG AA compliant readability |
